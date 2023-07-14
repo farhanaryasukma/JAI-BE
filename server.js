@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
-const {Product} = require('./models')
+const {Product, User, UserProduct} = require('./models')
 
 const app = express();
 
@@ -25,21 +25,37 @@ app.post('/orders', async (req, res) => {
     const { userId, orderItems } = req.body;
   
     try {
-      // Create the UserProduct records for each ordered item
-      const createdOrders = await UserProduct.bulkCreate(
-        orderItems.map((item) => ({
-          userId,
-          productId: item.productId,
-          quantity: item.quantity
-        }))
-      );
+      // Find the user based on userId
+      const user = await User.findByPk(userId);
   
-      res.status(201).json({ message: 'Order submitted successfully', orders: createdOrders });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Associate the order with the products
+      for (const orderItem of orderItems) {
+        const product = await Product.findByPk(orderItem.productId);
+  
+        if (!product) {
+          return res.status(404).json({ message: `Product not found with ID ${orderItem.productId}` });
+        }
+  
+        await UserProduct.create({
+          userId: user.id,
+          productId: product.id,
+          quantity: orderItem.quantity,
+        });
+      }
+  
+      // Return a success response
+      res.status(201).json({ message: 'Order submitted successfully!' });
     } catch (error) {
       console.error('Error submitting order:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      // Return an error response
+      res.status(500).json({ message: 'Error submitting order. Please try again later.' });
     }
   });
+  
 
 // Start the server
 app.listen(3000, () => {

@@ -55,6 +55,21 @@ app.post('/orders', async (req, res) => {
       res.status(500).json({ message: 'Error submitting order. Please try again later.' });
     }
   });
+
+  app.get('/orders/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    try {
+      const orders = await UserProduct.findAll({
+        where: { userId },
+      });
+  
+      // Return the order data as a response
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   
 
 // Start the server
